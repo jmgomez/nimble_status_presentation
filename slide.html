@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/theme/black.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/highlight/monokai.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
+  <body>
+  <div class="reveal">
+    <div class="slides">
+      <section data-nimib-slide-number="1" >
+      <p>What are we going to be talking about today?</p>
+<ul>
+<li>SAT Solvers
+<ul>
+<li>Enumerating Versions</li>
+</ul>
+</li>
+<li>Declarative Parser
+<ul>
+<li>Feature Blocks</li>
+</ul>
+</li>
+<li>Some small VSCode improvements:
+<ul>
+<li>VSCode highlights propagated exceptions</li>
+<li>Better nimble integration with vscode</li>
+</ul>
+</li>
+<li>Setup Nimble Action</li>
+</ul>
+      </section>
+      <section data-nimib-slide-number="2" >
+      <section data-nimib-slide-number="3" >
+      <h2>Why SAT Solvers?</h2>
+<p>Traditional greedy solvers make locally optimal choices, often leading to dependency conflicts or suboptimal selections.</p>
+      </section>
+      <section data-nimib-slide-number="4" >
+      <div>
+      <h2>Example Issue:</h2>
+<ul>
+<li>
+<p>Project A requires B &gt;= 0.1.4 and C &lt;= 0.1.0</p>
+</li>
+<li>
+<p>Project B (version 0.1.4) depends on C (any version)</p>
+</li>
+<li>
+<p>Project C has versions 0.1.0 and 0.2.1</p>
+<p>A greedy solver might pick C 0.2.1, breaking Project A’s constraints</p>
+</li>
+</ul>
+      </div>
+      </section>
+      <section data-nimib-slide-number="5" >
+      <h1>SAT Solver Advantage:</h1>
+<ul>
+<li>✔ Global optimization: Ensures all dependencies are satisfied simultaneously</li>
+<li>✔ Backtracking &amp; constraint solving: Finds a valid solution where C 0.1.0 is chosen</li>
+<li>✔ Correct &amp; complete solutions: Avoids resolution failures that greedy solvers cannot handle</li>
+</ul>
+      </section>
+      <section data-nimib-slide-number="6" >
+      <h1>Enumerating Versions:</h1>
+<p>Smarter Dependency Resolution:</p>
+<p>Traditional solvers pick a single version per package upfront, often leading to failures when dependencies are not satisfiable.</p>
+      </section>
+      <section data-nimib-slide-number="7" >
+      <h2>New Approach:</h2>
+<p>🔄 Iterative Version Selection: Instead of failing early, the solver downloads multiple versions and retries when conflicts arise.</p>
+      </section>
+      <section data-nimib-slide-number="8" >
+      <h2>How It Works:</h2>
+<ul>
+<li>If a dependency constraint allows any version, we fetch multiple versions</li>
+<li>If the first attempted solution fails, we backtrack and try another version</li>
+<li>This increases the chance of finding a valid solution automatically</li>
+</ul>
+      </section>
+      <section data-nimib-slide-number="9" >
+      <h2>Example:</h2>
+<ul>
+<li>A package requires B 0.1.4, which depends on C (any version)</li>
+<li>If picking C 0.2.1 fails, the solver automatically tries C 0.1.0</li>
+<li>The solver adapts dynamically to available versions, reducing resolution failures</li>
+</ul>
+      </section>
+      <section data-nimib-slide-number="10" >
+      <h2>Advantages:</h2>
+<ul>
+<li>✔ More robust package resolution</li>
+<li>✔ Fewer manual fixes needed</li>
+<li>✔ Improved user experience</li>
+</ul>
+      </section>
+      </section>
+      <section data-nimib-slide-number="11" >
+      <section data-nimib-slide-number="12" >
+      <h2>Declarative Parser</h2>
+<ul>
+<li>🚀 New in Nimble 0.18.0</li>
+<li>Enable with <code>--parser:declarative</code></li>
+<li>🔜 Will become the default parser in future versions</li>
+</ul>
+      </section>
+      <section data-nimib-slide-number="13" >
+      <h2>Advantages:</h2>
+<ul>
+<li>✔ Deterministic dependencies → Reliable caching</li>
+<li>✔ Improved speed → No need to spin up the Nim VM for every dependency</li>
+</ul>
+      </section>
+      <section data-nimib-slide-number="14" >
+      <h2>Conditional Dependencies with feature blocks</h2>
+<ul>
+<li>Supports optional dependencies</li>
+<li>Avoids unnecessary packages when not needed</li>
+</ul>
+      </section>
+      <section data-nimib-slide-number="15" >
+      <h2>Example:</h2>
+<p>A library supporting both asyncdispatch and chronos:</p>
+      <pre style="width: 100%"><code class="nim hljs" data-noescape data-line-numbers><span class="hljs-comment">#nimble file</span>
+feature <span class="hljs-string">&quot;chronos&quot;</span>:
+  require <span class="hljs-string">&quot;chronos&quot;</span></code></pre>
+      </section>
+      <section data-nimib-slide-number="16" >
+      <h2>Activating Features</h2>
+<p>Command line</p>
+<pre><code>`nimble --feature:&quot;chronos&quot; install`
+</code></pre>
+<p>Dependency level activation</p>
+<pre><code>`require &quot;awesomeAsyncPackage[chronos]&quot;`
+</code></pre>
+      </section>
+      <section data-nimib-slide-number="17" >
+      <h2>Checking Active Features in Code</h2>
+      <pre style="width: 100%"><code class="nim hljs" data-noescape data-line-numbers><span class="hljs-keyword">when</span> <span class="hljs-keyword">defined</span>(feature.awesomeAsyncPackage.chronos):
+  <span class="hljs-keyword">import</span> chronos
+<span class="hljs-keyword">else</span>:
+  <span class="hljs-keyword">import</span> std/asyncdispatch</code></pre>
+      </section>
+      <section data-nimib-slide-number="18" >
+      <h2>The dev Feature</h2>
+<p>Useful for development-specific dependencies</p>
+      <pre style="width: 100%"><code class="nim hljs" data-noescape data-line-numbers>feature <span class="hljs-string">&quot;dev&quot;</span>:
+  require <span class="hljs-string">&quot;unittest2&quot;</span></code></pre>
+      <pre style="width: 100%"><code class="nim hljs" data-noescape data-line-numbers><span class="hljs-comment">#alias</span>
+dev:
+  require <span class="hljs-string">&quot;unittest2&quot;</span></code></pre>
+      </section>
+      </section>
+      <section data-nimib-slide-number="19" >
+      <section data-nimib-slide-number="20" >
+      <p>VSCode highlights propagated exceptions</p>
+      <figure>
+<img src="images/propagated_exceptions.png" alt="">
+<figcaption></figcaption>
+</figure>
+      </section>
+      <section data-nimib-slide-number="21" >
+      <p>Better nimble integration with vscode</p>
+      <figure>
+<img src="images/nimble_tasks.png" alt="">
+<figcaption></figcaption>
+</figure>
+      </section>
+      </section>
+      <section data-nimib-slide-number="22" >
+      <p>Setup Nimble Action</p>
+      <pre><code class="language-yaml">- name: Setup Nimble
+        uses: nim-lang/setup-nimble-action@v1
+        with:
+          nimble-version: &quot;latest&quot;
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+</code></pre>
+      </section>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/highlight/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/notes/notes.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    Reveal.initialize({
+      plugins: [ 
+        RevealHighlight,
+        RevealNotes,
+      ],
+    });
+  </script>
+  </body>
+</html>
